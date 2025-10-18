@@ -106,19 +106,27 @@ function DocumentEditor() {
           // Draw overlay to temp canvas
           tempCtx.drawImage(overlayImg, 0, 0, overlayWidth, overlayHeight)
           
-          // Remove white background if enabled
+          // Remove white background using threshold-based alpha mask (like OpenCV)
           if (removeWhite) {
             const imageData = tempCtx.getImageData(0, 0, overlayWidth, overlayHeight)
             const data = imageData.data
             
+            // Create alpha mask using threshold approach (similar to cv2.threshold)
             for (let i = 0; i < data.length; i += 4) {
               const r = data[i]
               const g = data[i + 1]
               const b = data[i + 2]
               
-              // If pixel is close to white, make it transparent
-              if (r > 240 && g > 240 && b > 240) {
-                data[i + 3] = 0 // Set alpha to 0
+              // Calculate grayscale value
+              const gray = 0.299 * r + 0.587 * g + 0.114 * b
+              
+              // Threshold: if pixel is bright (>150), make it transparent
+              // This is similar to cv2.threshold(sig_gray, 150, 255, cv2.THRESH_BINARY_INV)
+              if (gray > 150) {
+                data[i + 3] = 0 // Fully transparent
+              } else {
+                // Keep the original color but ensure it's visible
+                data[i + 3] = 255 - gray // Darker pixels = more opaque
               }
             }
             
@@ -445,8 +453,7 @@ function DocumentEditor() {
                     alt="Overlay" 
                     style={{ 
                       width: `${overlaySize}px`,
-                      height: 'auto',
-                      filter: removeWhite ? 'brightness(0) saturate(100%)' : 'none'
+                      height: 'auto'
                     }} 
                   />
                 </div>

@@ -43,6 +43,10 @@ storage/
 backend_backup/
 requirements.txt.backup
 
+# Jupyter notebooks (reference only)
+*.ipynb
+Copy_of_02_06_Application_E_Signature.ipynb
+
 # IDE
 .vscode/
 .idea/
