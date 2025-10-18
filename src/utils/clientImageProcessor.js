@@ -137,11 +137,11 @@ export class ClientImageProcessor {
   }
   
   // Create watermark from text
-  createTextWatermark(text, options = {}) {
+  async createTextWatermark(text, options = {}) {
     const {
       fontSize = 48,
       color = '#000000',
-      opacity = 0.5,
+      opacity = 1.0,
       rotation = 0,
       fontFamily = 'Arial'
     } = options;
@@ -150,17 +150,20 @@ export class ClientImageProcessor {
     const ctx = canvas.getContext('2d');
     
     // Set font
-    ctx.font = `${fontSize}px ${fontFamily}`;
+    ctx.font = `bold ${fontSize}px ${fontFamily}`;
     
     // Measure text
     const metrics = ctx.measureText(text);
     const textWidth = metrics.width;
-    const textHeight = fontSize;
+    const textHeight = fontSize * 1.5;
     
-    // Set canvas size with padding
-    const padding = 40;
+    // Set canvas size with minimal padding
+    const padding = 10;
     canvas.width = textWidth + padding * 2;
     canvas.height = textHeight + padding * 2;
+    
+    // Clear canvas (transparent background)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Apply rotation
     ctx.save();
@@ -168,7 +171,7 @@ export class ClientImageProcessor {
     ctx.rotate((rotation * Math.PI) / 180);
     
     // Set style
-    ctx.font = `${fontSize}px ${fontFamily}`;
+    ctx.font = `bold ${fontSize}px ${fontFamily}`;
     ctx.fillStyle = color;
     ctx.globalAlpha = opacity;
     ctx.textAlign = 'center';
@@ -178,9 +181,12 @@ export class ClientImageProcessor {
     ctx.fillText(text, 0, 0);
     ctx.restore();
     
+    // Convert to blob, then auto-crop
     return new Promise((resolve) => {
-      canvas.toBlob((blob) => {
-        resolve(blob);
+      canvas.toBlob(async (blob) => {
+        // Auto-crop to remove excess transparent space
+        const cropped = await this.autoCrop(blob);
+        resolve(cropped);
       }, 'image/png');
     });
   }
