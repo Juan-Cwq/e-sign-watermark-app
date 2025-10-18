@@ -9,9 +9,10 @@ function DocumentEditor() {
   const [overlay, setOverlay] = useState(null)
   const [overlayPosition, setOverlayPosition] = useState({ x: 50, y: 50 })
   const [overlaySize, setOverlaySize] = useState(200)
-  const [overlayOpacity, setOverlayOpacity] = useState(1)
+  const [overlayOpacity, setOverlayOpacity] = useState(0.7)
   const [blendMode, setBlendMode] = useState('multiply')
   const [removeWhite, setRemoveWhite] = useState(true)
+  const [threshold, setThreshold] = useState(150)
   const [signatures, setSignatures] = useState([])
   const [watermarks, setWatermarks] = useState([])
   const [error, setError] = useState(null)
@@ -120,13 +121,15 @@ function DocumentEditor() {
               // Calculate grayscale value
               const gray = 0.299 * r + 0.587 * g + 0.114 * b
               
-              // Threshold: if pixel is bright (>150), make it transparent
-              // This is similar to cv2.threshold(sig_gray, 150, 255, cv2.THRESH_BINARY_INV)
-              if (gray > 150) {
+              // Threshold: if pixel is bright (>threshold), make it transparent
+              // This is similar to cv2.threshold(sig_gray, threshold, 255, cv2.THRESH_BINARY_INV)
+              if (gray > threshold) {
                 data[i + 3] = 0 // Fully transparent
               } else {
-                // Keep the original color but ensure it's visible
-                data[i + 3] = 255 - gray // Darker pixels = more opaque
+                // Keep the original color but make darker pixels more opaque
+                // Invert the relationship: darker = more visible
+                const alpha = Math.max(0, 255 - (gray * 1.5))
+                data[i + 3] = Math.min(255, alpha)
               }
             }
             
@@ -395,6 +398,22 @@ function DocumentEditor() {
                   Remove white background
                 </span>
               </label>
+
+              {removeWhite && (
+                <label style={{ display: 'block', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '4px' }}>
+                    Threshold: {threshold} (Higher = More removal)
+                  </span>
+                  <input
+                    type="range"
+                    min="100"
+                    max="220"
+                    value={threshold}
+                    onChange={(e) => setThreshold(parseInt(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                </label>
+              )}
             </div>
           )}
 
