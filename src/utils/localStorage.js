@@ -23,6 +23,9 @@ class LocalStorageManager {
       
       return signature;
     } catch (error) {
+      if (error.name === 'QuotaExceededError' || error.message.includes('quota')) {
+        throw new Error('Storage quota exceeded. Please delete some items from your library.');
+      }
       throw new Error('Failed to save signature: ' + error.message);
     }
   }
@@ -70,6 +73,9 @@ class LocalStorageManager {
       
       return watermark;
     } catch (error) {
+      if (error.name === 'QuotaExceededError' || error.message.includes('quota')) {
+        throw new Error('Storage quota exceeded. Please delete some items from your library.');
+      }
       throw new Error('Failed to save watermark: ' + error.message);
     }
   }

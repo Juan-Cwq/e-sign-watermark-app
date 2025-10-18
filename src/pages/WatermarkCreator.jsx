@@ -40,18 +40,20 @@ function WatermarkCreator() {
     setError(null)
 
     try {
-      let requestData = { type: watermarkType }
-
       if (watermarkType === 'text') {
-        requestData = {
-          ...requestData,
-          text: textSettings.text,
+        // Create text watermark client-side
+        const blob = await imageProcessor.createTextWatermark(textSettings.text, {
           fontSize: textSettings.fontSize,
           color: textSettings.color,
           opacity: textSettings.opacity,
           rotation: textSettings.rotation
-        }
+        })
+        
+        const dataUrl = await imageProcessor.blobToDataURL(blob)
+        setPreview({ image: dataUrl, type: 'text' })
+        setSuccess('Watermark created successfully!')
       } else {
+        // Image watermark
         if (!imageFile) {
           setError('Please upload an image')
           setLoading(false)
@@ -59,33 +61,16 @@ function WatermarkCreator() {
         }
 
         const reader = new FileReader()
-        reader.onloadend = async () => {
-          requestData = {
-            ...requestData,
-            image: reader.result,
-            opacity: imageSettings.opacity,
-            rotation: imageSettings.rotation
-          }
-
-          try {
-            const response = await axios.post('/api/watermark/create', requestData)
-            setPreview(response.data.data)
-            setSuccess('Watermark created successfully!')
-          } catch (err) {
-            setError(err.response?.data?.error || 'Failed to create watermark')
-          } finally {
-            setLoading(false)
-          }
+        reader.onloadend = () => {
+          setPreview({ image: reader.result, type: 'image' })
+          setSuccess('Watermark created successfully!')
+          setLoading(false)
         }
         reader.readAsDataURL(imageFile)
         return
       }
-
-      const response = await axios.post('/api/watermark/create', requestData)
-      setPreview(response.data.data)
-      setSuccess('Watermark created successfully!')
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create watermark')
+      setError('Failed to create watermark: ' + err.message)
     } finally {
       setLoading(false)
     }
@@ -98,17 +83,20 @@ function WatermarkCreator() {
     }
 
     try {
-      await axios.post('/api/watermark/save', {
-        image: preview.image,
-        name: watermarkName,
-        type: watermarkType,
-        settings: watermarkType === 'text' ? textSettings : imageSettings
-      })
+      // Convert data URL to blob
+      const blob = await fetch(preview.image).then(r => r.blob())
+      
+      // Save to localStorage
+      await storageManager.saveWatermark(watermarkName, blob, watermarkType)
 
       setSuccess('Watermark saved to library!')
       setWatermarkName('')
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save watermark')
+      if (err.message.includes('quota')) {
+        setError('Storage full! Please delete some items from your library.')
+      } else {
+        setError('Failed to save watermark: ' + err.message)
+      }
     }
   }
 
