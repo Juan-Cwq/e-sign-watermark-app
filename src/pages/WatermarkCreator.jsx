@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { Type, Image as ImageIcon, Save, Download, RotateCw, AlertCircle, CheckCircle } from 'lucide-react'
 import { ChromePicker } from 'react-color'
-import axios from 'axios'
+import imageProcessor from '../utils/clientImageProcessor'
+import storageManager from '../utils/localStorage'
 import './WatermarkCreator.css'
 
 function WatermarkCreator() {

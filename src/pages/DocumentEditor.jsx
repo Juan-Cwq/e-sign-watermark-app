@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { Upload, Download, Move, AlertCircle, CheckCircle } from 'lucide-react'
 import Draggable from 'react-draggable'
-import axios from 'axios'
+import storageManager from '../utils/localStorage'
 import './DocumentEditor.css'
 
 function DocumentEditor() {
