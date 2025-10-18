@@ -10,6 +10,8 @@ function DocumentEditor() {
   const [overlayPosition, setOverlayPosition] = useState({ x: 50, y: 50 })
   const [overlaySize, setOverlaySize] = useState(200)
   const [overlayOpacity, setOverlayOpacity] = useState(1)
+  const [blendMode, setBlendMode] = useState('multiply')
+  const [removeWhite, setRemoveWhite] = useState(true)
   const [signatures, setSignatures] = useState([])
   const [watermarks, setWatermarks] = useState([])
   const [error, setError] = useState(null)
@@ -95,11 +97,44 @@ function DocumentEditor() {
           const x = (overlayPosition.x / 100) * canvas.width
           const y = (overlayPosition.y / 100) * canvas.height
 
-          // Apply opacity
-          ctx.globalAlpha = overlayOpacity
+          // Create temporary canvas for overlay processing
+          const tempCanvas = document.createElement('canvas')
+          const tempCtx = tempCanvas.getContext('2d')
+          tempCanvas.width = overlayWidth
+          tempCanvas.height = overlayHeight
+          
+          // Draw overlay to temp canvas
+          tempCtx.drawImage(overlayImg, 0, 0, overlayWidth, overlayHeight)
+          
+          // Remove white background if enabled
+          if (removeWhite) {
+            const imageData = tempCtx.getImageData(0, 0, overlayWidth, overlayHeight)
+            const data = imageData.data
+            
+            for (let i = 0; i < data.length; i += 4) {
+              const r = data[i]
+              const g = data[i + 1]
+              const b = data[i + 2]
+              
+              // If pixel is close to white, make it transparent
+              if (r > 240 && g > 240 && b > 240) {
+                data[i + 3] = 0 // Set alpha to 0
+              }
+            }
+            
+            tempCtx.putImageData(imageData, 0, 0)
+          }
 
-          // Draw overlay
-          ctx.drawImage(overlayImg, x, y, overlayWidth, overlayHeight)
+          // Apply blend mode and opacity
+          ctx.globalAlpha = overlayOpacity
+          ctx.globalCompositeOperation = blendMode
+
+          // Draw processed overlay
+          ctx.drawImage(tempCanvas, x, y)
+
+          // Reset composite operation
+          ctx.globalCompositeOperation = 'source-over'
+          ctx.globalAlpha = 1
 
           // Download
           canvas.toBlob((blob) => {
@@ -316,6 +351,42 @@ function DocumentEditor() {
                   style={{ width: '100%' }}
                 />
               </label>
+
+              <label style={{ display: 'block', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '4px' }}>
+                  Blend Mode
+                </span>
+                <select
+                  value={blendMode}
+                  onChange={(e) => setBlendMode(e.target.value)}
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="normal">Normal</option>
+                  <option value="multiply">Multiply (Recommended)</option>
+                  <option value="darken">Darken</option>
+                  <option value="overlay">Overlay</option>
+                  <option value="screen">Screen</option>
+                  <option value="soft-light">Soft Light</option>
+                </select>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={removeWhite}
+                  onChange={(e) => setRemoveWhite(e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '12px', color: '#666' }}>
+                  Remove white background
+                </span>
+              </label>
             </div>
           )}
 
@@ -365,6 +436,7 @@ function DocumentEditor() {
                     left: `${overlayPosition.x}%`,
                     top: `${overlayPosition.y}%`,
                     opacity: overlayOpacity,
+                    mixBlendMode: blendMode,
                     pointerEvents: 'none'
                   }}
                 >
@@ -373,7 +445,8 @@ function DocumentEditor() {
                     alt="Overlay" 
                     style={{ 
                       width: `${overlaySize}px`,
-                      height: 'auto'
+                      height: 'auto',
+                      filter: removeWhite ? 'brightness(0) saturate(100%)' : 'none'
                     }} 
                   />
                 </div>
