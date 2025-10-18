@@ -5,7 +5,7 @@ import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
 import SignatureDigitizer from './pages/SignatureDigitizerClient'
 import WatermarkCreator from './pages/WatermarkCreator'
-import DocumentEditor from './pages/DocumentEditor'
+import DocumentEditor from './pages/DocumentEditorClient'
 import Library from './pages/Library'
 import './App.css'
 
