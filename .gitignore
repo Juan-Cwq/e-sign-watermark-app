@@ -39,6 +39,10 @@ dist/
 uploads/
 storage/
 
+# Backend backup (not needed for frontend deployment)
+backend_backup/
+requirements.txt.backup
+
 # IDE
 .vscode/
 .idea/
