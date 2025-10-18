@@ -17,6 +17,7 @@ function DocumentEditor() {
   const [watermarks, setWatermarks] = useState([])
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  const [processedOverlay, setProcessedOverlay] = useState(null)
   const canvasRef = useRef(null)
   const previewRef = useRef(null)
 
@@ -62,8 +63,61 @@ function DocumentEditor() {
         name: item.name
       })
       setSuccess(`${type === 'signature' ? 'Signature' : 'Watermark'} selected!`)
+      processOverlayForPreview(item.data)
     }
   }
+
+  // Process overlay with threshold for preview
+  const processOverlayForPreview = async (imageData) => {
+    if (!removeWhite) {
+      setProcessedOverlay(imageData)
+      return
+    }
+
+    try {
+      const img = new Image()
+      img.src = imageData
+      
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        canvas.width = img.width
+        canvas.height = img.height
+        
+        ctx.drawImage(img, 0, 0)
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const data = imageData.data
+        
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i]
+          const g = data[i + 1]
+          const b = data[i + 2]
+          
+          const gray = 0.299 * r + 0.587 * g + 0.114 * b
+          
+          if (gray > threshold) {
+            data[i + 3] = 0
+          } else {
+            const alpha = Math.max(0, 255 - (gray * 1.5))
+            data[i + 3] = Math.min(255, alpha)
+          }
+        }
+        
+        ctx.putImageData(imageData, 0, 0)
+        setProcessedOverlay(canvas.toDataURL())
+      }
+    } catch (err) {
+      setProcessedOverlay(imageData)
+    }
+  }
+
+  // Re-process when threshold changes
+  useEffect(() => {
+    if (overlay) {
+      processOverlayForPreview(overlay.data)
+    }
+  }, [threshold, removeWhite, overlay])
 
   const handleDownload = async () => {
     if (!documentImage || !overlay) {
@@ -456,7 +510,7 @@ function DocumentEditor() {
                 }} 
               />
               
-              {overlay && (
+              {processedOverlay && (
                 <div
                   style={{
                     position: 'absolute',
@@ -468,7 +522,7 @@ function DocumentEditor() {
                   }}
                 >
                   <img 
-                    src={overlay.data} 
+                    src={processedOverlay} 
                     alt="Overlay" 
                     style={{ 
                       width: `${overlaySize}px`,
