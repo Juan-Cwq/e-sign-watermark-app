@@ -88,8 +88,8 @@ export class ClientImageProcessor {
           }
         }
         
-        // Add padding
-        const padding = 20;
+        // Add minimal padding for clean edges
+        const padding = 5;
         minX = Math.max(0, minX - padding);
         minY = Math.max(0, minY - padding);
         maxX = Math.min(canvas.width, maxX + padding);
