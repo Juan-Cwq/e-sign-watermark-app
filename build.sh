@@ -1,11 +1,20 @@
 #!/bin/bash
 # Build script for Render deployment
 
+set -e  # Exit on error
+
 echo "🚀 Starting build process..."
+
+# Check Python version
+echo "🐍 Python version:"
+python --version
+
+# Upgrade pip
+echo "📦 Upgrading pip..."
+pip install --upgrade pip setuptools wheel
 
 # Install Python dependencies
 echo "📦 Installing Python dependencies..."
-pip install --upgrade pip
 pip install -r requirements.txt
 
 # Install Node dependencies and build frontend
