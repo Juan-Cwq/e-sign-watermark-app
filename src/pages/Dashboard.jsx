@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react'
 import storageManager from '../utils/localStorage'
+import storageCleaner from '../utils/storageCleaner'
 import { useNavigate } from 'react-router-dom'
-import { PenTool, Droplet, FileText, Zap, Shield, Cloud } from 'lucide-react'
+import { PenTool, Droplet, FileText, Zap, Shield, Cloud, AlertTriangle } from 'lucide-react'
 import './Dashboard.css'
 
 function Dashboard() {
   const navigate = useNavigate()
   const [stats, setStats] = useState({ signatures: 0, watermarks: 0, totalItems: 0 })
+  const [storageInfo, setStorageInfo] = useState(null)
 
   useEffect(() => {
-    const storageInfo = storageManager.getStorageInfo()
-    setStats(storageInfo)
+    const info = storageManager.getStorageInfo()
+    setStats(info)
+    
+    const cleanerInfo = storageCleaner.getInfo()
+    setStorageInfo(cleanerInfo)
   }, [])
 
   const features = [
@@ -55,6 +60,13 @@ function Dashboard() {
     }
   ]
 
+  const handleClearStorage = () => {
+    if (window.confirm('Are you sure you want to delete ALL signatures and watermarks? This cannot be undone!')) {
+      storageCleaner.clearAll()
+      window.location.reload()
+    }
+  }
+
   return (
     <div className="page dashboard">
       <div className="page-header">
@@ -63,6 +75,32 @@ function Dashboard() {
           Professional signature digitization and watermark creation for secure document handling
         </p>
       </div>
+
+      {storageInfo && storageInfo.isNearlyFull && (
+        <div className="error-state fade-in" style={{ marginBottom: '20px' }}>
+          <div className="error-title">
+            <AlertTriangle size={16} />
+            Storage Nearly Full
+          </div>
+          <div className="error-message">
+            You're using {storageInfo.totalSizeMB} MB of storage. Please delete some items from your library or{' '}
+            <button 
+              onClick={handleClearStorage}
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                color: 'inherit', 
+                textDecoration: 'underline', 
+                cursor: 'pointer',
+                padding: 0,
+                font: 'inherit'
+              }}
+            >
+              clear all data
+            </button>.
+          </div>
+        </div>
+      )}
 
       <div className="dashboard-content">
         <section className="section">

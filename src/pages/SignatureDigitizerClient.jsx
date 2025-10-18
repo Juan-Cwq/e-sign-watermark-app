@@ -54,7 +54,9 @@ function SignatureDigitizer() {
     }
 
     try {
-      await storageManager.saveSignature(signatureName, processedBlob)
+      // Compress image before saving to reduce storage usage
+      const compressedBlob = await imageProcessor.compressImage(processedBlob, 600, 0.7)
+      await storageManager.saveSignature(signatureName, compressedBlob)
       setSuccess('Signature saved to library!')
       setSignatureName('')
     } catch (err) {

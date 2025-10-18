@@ -195,16 +195,64 @@ export class ClientImageProcessor {
     });
   }
   
-  // Download blob as file
+  // Helper: Download blob as file
   downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  // Compress image to reduce storage size
+  async compressImage(blob, maxWidth = 800, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      const url = URL.createObjectURL(blob)
+      
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        
+        // Calculate new dimensions
+        let width = img.width
+        let height = img.height
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width
+          width = maxWidth
+        }
+        
+        // Create canvas and compress
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        canvas.toBlob(
+          (compressedBlob) => {
+            if (compressedBlob) {
+              resolve(compressedBlob)
+            } else {
+              reject(new Error('Failed to compress image'))
+            }
+          },
+          'image/png',
+          quality
+        )
+      }
+      
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        reject(new Error('Failed to load image for compression'))
+      }
+      
+      img.src = url
+    })
   }
 }
 
