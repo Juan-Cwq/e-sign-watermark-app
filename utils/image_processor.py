@@ -1,10 +1,20 @@
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
-import cv2
 import numpy as np
-from rembg import remove
 import base64
 import io
 import os
+
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
+
+try:
+    from rembg import remove
+    REMBG_AVAILABLE = True
+except ImportError:
+    REMBG_AVAILABLE = False
 
 class ImageProcessor:
     """Advanced image processing for signature digitization"""
