@@ -1,10 +1,17 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import storageManager from '../utils/localStorage'
 import { useNavigate } from 'react-router-dom'
 import { PenTool, Droplet, FileText, Zap, Shield, Cloud } from 'lucide-react'
 import './Dashboard.css'
 
 function Dashboard() {
   const navigate = useNavigate()
+  const [stats, setStats] = useState({ signatures: 0, watermarks: 0, totalItems: 0 })
+
+  useEffect(() => {
+    const storageInfo = storageManager.getStorageInfo()
+    setStats(storageInfo)
+  }, [])
 
   const features = [
     {

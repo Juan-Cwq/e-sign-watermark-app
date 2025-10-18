@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Trash2, Download, FolderOpen, AlertCircle, CheckCircle } from 'lucide-react'
-import axios from 'axios'
+import storageManager from '../utils/localStorage'
 import './Library.css'
 
 function Library() {
@@ -15,18 +15,16 @@ function Library() {
     loadLibraries()
   }, [])
 
-  const loadLibraries = async () => {
+  const loadLibraries = () => {
     setLoading(true)
     setError(null)
 
     try {
-      const [sigResponse, waterResponse] = await Promise.all([
-        axios.get('/api/signature/list'),
-        axios.get('/api/watermark/list')
-      ])
+      const sigs = storageManager.getSignatures()
+      const wms = storageManager.getWatermarks()
 
-      setSignatures(sigResponse.data.signatures || [])
-      setWatermarks(waterResponse.data.watermarks || [])
+      setSignatures(sigs)
+      setWatermarks(wms)
     } catch (err) {
       setError('Failed to load library')
     } finally {
@@ -34,18 +32,17 @@ function Library() {
     }
   }
 
-  const handleDelete = async (id, type) => {
+  const handleDelete = (id, type) => {
     if (!window.confirm(`Are you sure you want to delete this ${type}?`)) {
       return
     }
 
     try {
-      const endpoint = type === 'signature' ? `/api/signature/${id}` : `/api/watermark/${id}`
-      await axios.delete(endpoint)
-
       if (type === 'signature') {
+        storageManager.deleteSignature(id)
         setSignatures(signatures.filter(sig => sig.id !== id))
       } else {
+        storageManager.deleteWatermark(id)
         setWatermarks(watermarks.filter(wm => wm.id !== id))
       }
 
@@ -55,12 +52,13 @@ function Library() {
     }
   }
 
-  const handleDownload = async (id, name, type) => {
+  const handleDownload = (id, name, type) => {
     try {
-      const endpoint = type === 'signature' ? `/api/signature/${id}` : `/api/watermark/${id}`
-      const response = await axios.get(endpoint, { responseType: 'blob' })
+      const item = type === 'signature' 
+        ? storageManager.getSignature(id)
+        : storageManager.getWatermark(id)
 
-      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const url = item.data
       const link = document.createElement('a')
       link.href = url
       link.setAttribute('download', `${name}.png`)
@@ -149,9 +147,7 @@ function Library() {
               <div key={item.id} className="library-item card card-hover fade-in">
                 <div className="item-preview">
                   <img
-                    src={activeTab === 'signatures' 
-                      ? `/api/signature/${item.id}` 
-                      : `/api/watermark/${item.id}`}
+                    src={item.data}
                     alt={item.name}
                     className="item-image"
                   />

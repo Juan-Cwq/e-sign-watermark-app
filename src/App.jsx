@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
-import SignatureDigitizer from './pages/SignatureDigitizer'
+import SignatureDigitizer from './pages/SignatureDigitizerClient'
 import WatermarkCreator from './pages/WatermarkCreator'
 import DocumentEditor from './pages/DocumentEditor'
 import Library from './pages/Library'

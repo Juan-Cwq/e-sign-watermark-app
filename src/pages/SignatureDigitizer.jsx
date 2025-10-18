@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
-import { useDropzone } from 'react-dropzone'
-import { Upload, Download, Save, Loader, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, Download, Save, AlertCircle, CheckCircle } from 'lucide-react'
+import imageProcessor from '../utils/clientImageProcessor'
+import storageManager from '../utils/localStorage'
 import axios from 'axios'
 import './SignatureDigitizer.css'
 

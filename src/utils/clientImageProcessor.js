@@ -1,0 +1,211 @@
+// Client-side image processing without backend
+export class ClientImageProcessor {
+  
+  // Simple background removal using canvas
+  async removeBackground(imageFile) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          canvas.width = img.width;
+          canvas.height = img.height;
+          
+          // Draw image
+          ctx.drawImage(img, 0, 0);
+          
+          // Get image data
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imageData.data;
+          
+          // Simple white background removal
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            
+            // If pixel is close to white, make it transparent
+            const brightness = (r + g + b) / 3;
+            if (brightness > 200) {
+              data[i + 3] = 0; // Set alpha to 0 (transparent)
+            }
+          }
+          
+          // Put modified data back
+          ctx.putImageData(imageData, 0, 0);
+          
+          // Convert to blob
+          canvas.toBlob((blob) => {
+            resolve(blob);
+          }, 'image/png');
+        };
+        
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      
+      reader.onerror = reject;
+      reader.readAsDataURL(imageFile);
+    });
+  }
+  
+  // Auto-crop to content
+  async autoCrop(imageBlob) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(imageBlob);
+      
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        // Find bounds of non-transparent pixels
+        let minX = canvas.width;
+        let minY = canvas.height;
+        let maxX = 0;
+        let maxY = 0;
+        
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            const alpha = data[(y * canvas.width + x) * 4 + 3];
+            if (alpha > 0) {
+              if (x < minX) minX = x;
+              if (x > maxX) maxX = x;
+              if (y < minY) minY = y;
+              if (y > maxY) maxY = y;
+            }
+          }
+        }
+        
+        // Add padding
+        const padding = 20;
+        minX = Math.max(0, minX - padding);
+        minY = Math.max(0, minY - padding);
+        maxX = Math.min(canvas.width, maxX + padding);
+        maxY = Math.min(canvas.height, maxY + padding);
+        
+        // Create cropped canvas
+        const croppedWidth = maxX - minX;
+        const croppedHeight = maxY - minY;
+        const croppedCanvas = document.createElement('canvas');
+        const croppedCtx = croppedCanvas.getContext('2d');
+        
+        croppedCanvas.width = croppedWidth;
+        croppedCanvas.height = croppedHeight;
+        
+        croppedCtx.drawImage(
+          canvas,
+          minX, minY, croppedWidth, croppedHeight,
+          0, 0, croppedWidth, croppedHeight
+        );
+        
+        croppedCanvas.toBlob((blob) => {
+          URL.revokeObjectURL(url);
+          resolve(blob);
+        }, 'image/png');
+      };
+      
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to load image'));
+      };
+      
+      img.src = url;
+    });
+  }
+  
+  // Process signature (combine background removal and cropping)
+  async processSignature(imageFile) {
+    try {
+      const noBg = await this.removeBackground(imageFile);
+      const cropped = await this.autoCrop(noBg);
+      return cropped;
+    } catch (error) {
+      throw new Error('Failed to process signature: ' + error.message);
+    }
+  }
+  
+  // Create watermark from text
+  createTextWatermark(text, options = {}) {
+    const {
+      fontSize = 48,
+      color = '#000000',
+      opacity = 0.5,
+      rotation = 0,
+      fontFamily = 'Arial'
+    } = options;
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set font
+    ctx.font = `${fontSize}px ${fontFamily}`;
+    
+    // Measure text
+    const metrics = ctx.measureText(text);
+    const textWidth = metrics.width;
+    const textHeight = fontSize;
+    
+    // Set canvas size with padding
+    const padding = 40;
+    canvas.width = textWidth + padding * 2;
+    canvas.height = textHeight + padding * 2;
+    
+    // Apply rotation
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((rotation * Math.PI) / 180);
+    
+    // Set style
+    ctx.font = `${fontSize}px ${fontFamily}`;
+    ctx.fillStyle = color;
+    ctx.globalAlpha = opacity;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Draw text
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+    
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, 'image/png');
+    });
+  }
+  
+  // Convert blob to data URL
+  blobToDataURL(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+  
+  // Download blob as file
+  downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+}
+
+export default new ClientImageProcessor();
